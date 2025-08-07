@@ -30,6 +30,12 @@ WEAK_BUY_THRESHOLD = 30
 DAILY_REPORT_TIME = "13:00"  # 1:00 PM IST
 TIMEZONE = "Asia/Kolkata"
 
+# Trading hours settings (IST)
+TRADING_START_HOUR = 9
+TRADING_START_MINUTE = 15
+TRADING_END_HOUR = 15
+TRADING_END_MINUTE = 30
+
 # Data settings
 STOCK_DATA_PERIOD = "1y"  # 1 year of historical data
 
