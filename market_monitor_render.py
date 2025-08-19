@@ -229,12 +229,12 @@ class MarketMonitor:
         
         # Check if it's a weekday (Monday = 0, Sunday = 6)
         if current_time.weekday() >= 5:  # Saturday or Sunday
-            print(f"[{datetime.now().strftime('%H:%M:%S')}] Weekend - Market closed")
+            print(f"[{current_time.strftime('%H:%M:%S')}] Weekend - Market closed")
             return False
         
         # Check if it's a market holiday
         if self.is_market_holiday(current_time):
-            print(f"[{datetime.now().strftime('%H:%M:%S')}] Market holiday - Market closed")
+            print(f"[{current_time.strftime('%H:%M:%S')}] Market holiday - Market closed")
             return False
         
         # Check if it's within market hours (9:15 AM - 3:30 PM IST)
@@ -246,21 +246,32 @@ class MarketMonitor:
     def check_market_once(self):
         """Check market once and send alert if needed"""
         if not self.is_market_open():
-            print(f"[{datetime.now().strftime('%H:%M:%S')}] Market closed")
+            # Get current time in IST for logging
+            import pytz
+            ist = pytz.timezone('Asia/Kolkata')
+            current_time_ist = datetime.now(ist)
+            print(f"[{current_time_ist.strftime('%H:%M:%S')}] Market closed")
             return
         
         # Get current market data
         data = self.get_nifty_sensex_data()
         
         if not data:
-            print(f"[{datetime.now().strftime('%H:%M:%S')}] Failed to fetch market data")
+            # Get current time in IST for logging
+            import pytz
+            ist = pytz.timezone('Asia/Kolkata')
+            current_time_ist = datetime.now(ist)
+            print(f"[{current_time_ist.strftime('%H:%M:%S')}] Failed to fetch market data")
             return
         
         # Update last check time
         self.last_check = datetime.now()
         
         # Print current status
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] Nifty: {data['nifty']['current']:.2f} ({data['nifty']['change_percent']:+.2f}%) | Sensex: {data['sensex']['current']:.2f} ({data['sensex']['change_percent']:+.2f}%)")
+        import pytz
+        ist = pytz.timezone('Asia/Kolkata')
+        current_time_ist = datetime.now(ist)
+        print(f"[{current_time_ist.strftime('%H:%M:%S')}] Nifty: {data['nifty']['current']:.2f} ({data['nifty']['change_percent']:+.2f}%) | Sensex: {data['sensex']['current']:.2f} ({data['sensex']['change_percent']:+.2f}%)")
         
         # Check for daily summary (1 PM IST)
         if self.should_send_daily_summary():
@@ -288,9 +299,15 @@ def health():
     """Health check endpoint for Render"""
     global monitor
     
+    # Get current time in IST for display
+    import pytz
+    ist = pytz.timezone('Asia/Kolkata')
+    current_time_ist = datetime.now(ist)
+    
     status = {
         'status': 'healthy',
-        'timestamp': datetime.now().isoformat(),
+        'timestamp': current_time_ist.isoformat(),
+        'timestamp_ist': current_time_ist.strftime('%Y-%m-%d %H:%M:%S IST'),
         'last_check': monitor.last_check.isoformat() if monitor and monitor.last_check else None,
         'last_alert': monitor.last_alert.isoformat() if monitor and monitor.last_alert else None,
         'last_daily_summary': monitor.last_daily_summary.isoformat() if monitor and monitor.last_daily_summary else None,
