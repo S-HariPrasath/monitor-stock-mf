@@ -19,6 +19,7 @@ class MarketMonitor:
         self.telegram_chat_id = telegram_chat_id
         self.last_check = None
         self.last_alert = None
+        self.last_daily_summary = None
         
     def get_nifty_sensex_data(self):
         """Get current Nifty 50 and Sensex data"""
@@ -126,8 +127,99 @@ class MarketMonitor:
         
         return message
     
+    def create_daily_summary_message(self, data):
+        """Create daily summary message at 1 PM"""
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Determine market sentiment
+        nifty_change = data['nifty']['change_percent']
+        sensex_change = data['sensex']['change_percent']
+        
+        if nifty_change > 0 and sensex_change > 0:
+            sentiment = "🟢 BULLISH"
+        elif nifty_change < 0 and sensex_change < 0:
+            sentiment = "🔴 BEARISH"
+        else:
+            sentiment = "🟡 MIXED"
+        
+        message = f"<b>📊 Daily Market Summary</b>\n"
+        message += f"⏰ {current_time}\n\n"
+        
+        message += f"<b>Market Status:</b>\n"
+        message += f"📈 Nifty 50: {data['nifty']['current']:.2f} ({nifty_change:+.2f}%)\n"
+        message += f"📈 Sensex: {data['sensex']['current']:.2f} ({sensex_change:+.2f}%)\n\n"
+        
+        message += f"<b>Market Sentiment:</b> {sentiment}\n\n"
+        message += f"<i>Daily summary from Render Market Monitor</i>"
+        
+        return message
+    
+    def should_send_daily_summary(self):
+        """Check if it's time to send daily summary (1 PM IST, weekdays, non-holidays)"""
+        import pytz
+        
+        ist = pytz.timezone('Asia/Kolkata')
+        current_time = datetime.now(ist)
+        
+        # Check if it's a weekday
+        if current_time.weekday() >= 5:  # Saturday or Sunday
+            return False
+        
+        # Check if it's a market holiday
+        if self.is_market_holiday(current_time):
+            return False
+        
+        # Check if it's 1 PM IST
+        if current_time.hour == 13 and current_time.minute < 5:  # Between 1:00-1:05 PM
+            # Check if we already sent today's summary
+            if self.last_daily_summary:
+                last_summary_date = self.last_daily_summary.date()
+                current_date = current_time.date()
+                if last_summary_date == current_date:
+                    return False
+            return True
+        return False
+    
+    def is_market_holiday(self, current_time):
+        """Check if it's a major Indian market holiday"""
+        # Major Indian market holidays (2024-2025)
+        holidays_2024 = [
+            "2024-01-26",  # Republic Day
+            "2024-03-08",  # Mahashivratri
+            "2024-03-25",  # Holi
+            "2024-04-09",  # Ram Navami
+            "2024-04-11",  # Mahavir Jayanti
+            "2024-05-01",  # Maharashtra Day
+            "2024-06-17",  # Bakri Id
+            "2024-08-15",  # Independence Day
+            "2024-10-02",  # Mahatma Gandhi Jayanti
+            "2024-11-01",  # Diwali-Laxmi Pujan
+            "2024-11-15",  # Gurunanak Jayanti
+            "2024-12-25",  # Christmas
+        ]
+        
+        holidays_2025 = [
+            "2025-01-26",  # Republic Day
+            "2025-03-14",  # Mahashivratri
+            "2025-03-14",  # Holi
+            "2025-03-29",  # Ram Navami
+            "2025-04-01",  # Mahavir Jayanti
+            "2025-05-01",  # Maharashtra Day
+            "2025-06-07",  # Bakri Id
+            "2025-08-15",  # Independence Day
+            "2025-10-02",  # Mahatma Gandhi Jayanti
+            "2025-10-21",  # Diwali-Laxmi Pujan
+            "2025-11-05",  # Gurunanak Jayanti
+            "2025-12-25",  # Christmas
+        ]
+        
+        current_date = current_time.strftime("%Y-%m-%d")
+        all_holidays = holidays_2024 + holidays_2025
+        
+        return current_date in all_holidays
+    
     def is_market_open(self):
-        """Check if Indian market is open (9:15 AM - 3:30 PM IST)"""
+        """Check if Indian market is open (9:15 AM - 3:30 PM IST, weekdays, non-holidays)"""
         from datetime import datetime
         import pytz
         
@@ -137,6 +229,12 @@ class MarketMonitor:
         
         # Check if it's a weekday (Monday = 0, Sunday = 6)
         if current_time.weekday() >= 5:  # Saturday or Sunday
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] Weekend - Market closed")
+            return False
+        
+        # Check if it's a market holiday
+        if self.is_market_holiday(current_time):
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] Market holiday - Market closed")
             return False
         
         # Check if it's within market hours (9:15 AM - 3:30 PM IST)
@@ -164,6 +262,14 @@ class MarketMonitor:
         # Print current status
         print(f"[{datetime.now().strftime('%H:%M:%S')}] Nifty: {data['nifty']['current']:.2f} ({data['nifty']['change_percent']:+.2f}%) | Sensex: {data['sensex']['current']:.2f} ({data['sensex']['change_percent']:+.2f}%)")
         
+        # Check for daily summary (1 PM IST)
+        if self.should_send_daily_summary():
+            print("📊 Sending daily summary...")
+            summary_message = self.create_daily_summary_message(data)
+            if self.send_telegram_alert(summary_message):
+                self.last_daily_summary = datetime.now()
+                print("✅ Daily summary sent successfully!")
+        
         # Check for alert conditions
         alerts = self.check_market_conditions(data)
         
@@ -187,6 +293,7 @@ def health():
         'timestamp': datetime.now().isoformat(),
         'last_check': monitor.last_check.isoformat() if monitor and monitor.last_check else None,
         'last_alert': monitor.last_alert.isoformat() if monitor and monitor.last_alert else None,
+        'last_daily_summary': monitor.last_daily_summary.isoformat() if monitor and monitor.last_daily_summary else None,
         'market_open': monitor.is_market_open() if monitor else False
     }
     

@@ -6,6 +6,7 @@ A simple program to monitor Indian stock market (Nifty 50 & Sensex) and send Tel
 - ✅ Nifty 50 drops more than 2% in a day
 - ✅ Both Sensex and Nifty are in red
 - ✅ Market opens gap down by more than 1%
+- ✅ Daily summary at 1 PM IST with current values and percentage changes
 
 ## 🚀 Deploy to Render (FREE)
 
@@ -25,10 +26,12 @@ A simple program to monitor Indian stock market (Nifty 50 & Sensex) and send Tel
 
 The program:
 1. Runs continuously 24/7 on Render
-2. Checks market every 5 minutes during market hours (9:15 AM - 3:30 PM IST)
-3. Fetches real-time Nifty 50 and Sensex data from Yahoo Finance
-4. Sends Telegram alerts when conditions are met
-5. Provides health check dashboard
+2. Checks market every 5 minutes during market hours (9:15 AM - 3:30 PM IST, weekdays only)
+3. Automatically skips weekends and major Indian market holidays
+4. Fetches real-time Nifty 50 and Sensex data from Yahoo Finance
+5. Sends Telegram alerts when conditions are met (only on trading days)
+6. Sends daily summary at 1 PM IST with current values and percentage changes (only on trading days)
+7. Provides health check dashboard
 
 ### Sample Alert
 ```
@@ -49,6 +52,20 @@ Overall Market Sentiment: 🔴 BEARISH
 Alert from Render Market Monitor
 ```
 
+### Sample Daily Summary
+```
+📊 Daily Market Summary
+⏰ 2024-08-19 13:00:00
+
+Market Status:
+📈 Nifty 50: 19,450.25 (+0.85%)
+📈 Sensex: 64,200.50 (+0.72%)
+
+Market Sentiment: 🟢 BULLISH
+
+Daily summary from Render Market Monitor
+```
+
 ## Files
 - `market_monitor_render.py` - Main monitoring script
 - `render.yaml` - Render deployment configuration
@@ -58,9 +75,11 @@ Alert from Render Market Monitor
 
 ## Features
 - Real-time market data from Yahoo Finance
-- Telegram alerts with formatted messages
+- Telegram alerts with formatted messages (only on trading days)
+- Daily summary at 1 PM IST (only on trading days)
 - Health check dashboard at `/health`
-- Automatic market hours detection
+- Automatic market hours detection (9:15 AM - 3:30 PM IST)
+- Weekend and holiday detection (no alerts on non-trading days)
 - Continuous monitoring 24/7
 - Configurable thresholds
 
